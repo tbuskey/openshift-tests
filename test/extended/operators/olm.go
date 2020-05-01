@@ -417,6 +417,50 @@ var _ = g.Describe("[sig-operators] an end user use OLM", func() {
 		}
 
 	})
+
+	// author: tbuskey@redhat.com
+	g.It("Medium-25782-CatalogSource Status should have information on last observed state(s", func() {
+		buildPruningBaseDir := exutil.FixturePath("testdata", "olm")
+		currentNS := oc.Namespace()
+		msg := ""
+		cscStatusCSMsg := ""
+		cscStatusBadCSV := "etcdoperator.2"
+		cscStatusCS := filepath.Join(buildPruningBaseDir, "25782-catalogsource.yaml")
+		cscStatusOperator := filepath.Join(buildPruningBaseDir, "25782-operator.yaml")
+		// g.By("Insert bad CSV and CatalogSource into operator")
+		configFile, err := oc.SetNamespace(currentNS).AsAdmin().Run("process").Args("-f", cscStatusOperator, "-p", fmt.Sprintf("NAMESPACE=%s", oc.Namespace()), fmt.Sprintf("BADCSV=%s", cscStatusBadCSV)).OutputToFile("config.json")
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		err = oc.Run("create").Args("-f", configFile).Execute()
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		cscStatusCSMsg, err = oc.SetNamespace(currentNS).AsAdmin().Run("create").Args("-f", cscStatusCS, "-n", "openshift-operators").Output()
+		o.Expect(err).NotTo(o.HaveOccurred())
+		fmt.Println(cscStatusCSMsg)
+
+		msg, err = oc.SetNamespace(currentNS).AsAdmin().Run("create").Args("-f", cscStatusOperator, "-n", "openshift-operators").Output()
+		o.Expect(err).NotTo(o.HaveOccurred())
+		fmt.Println(msg)
+
+		/*
+			oc get catalogsource -n openshift-operators
+			installed-community-global-operators   Community Operators   configmap   Community   68s
+
+			oc get configmaps -n openshift-operators
+			installed-community-global-operators   3      86s
+
+			oc get pods -n openshift-operators
+			installed-community-global-operators-2t5x4   1/1     Running   0          2m
+
+			oc get catalogsource -n openshift-operators -o yaml
+			oc get catalogsource -n openshift-operators -o=jsonpath='{.items[0].status.reason}'
+			oc get catalogsource -n openshift-operators -o=jsonpath='{.items[0].status.message}'
+
+
+		*/
+
+	})
+
 })
 
 var _ = g.Describe("[sig-operators] an end user handle OLM common object", func() {
